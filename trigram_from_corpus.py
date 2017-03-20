@@ -6,13 +6,18 @@ from nltk.corpus import brown #Load the brown corpus
 #nltk.download()
 
 ngram = 3 #A trigram model for trigram training data
-sentences = brown.sents(categories = 'adventure')
-words = brown.words(categories = 'adventure') #This can be any category
+#sentences = brown.sents(categories = 'adventure')
+words = brown.words(categories = 'adventure') #Get the words from the test corpus
 
 # print len(sentences),len(words)
 
 #Store the model to a text file
+
+"""Punctuations in a corpus helps to understand the structuring of sentences hence must be used in word tokenizations.
+But cannot be used in a trigram data model hence they are to be removed"""
+
 punctuations = ['.',',','?','\'','\"',"!",":",";",'/']
+
 text_file = open('trigram_adventure.txt','w')
 for i,word in enumerate(words):
 	if i > len(words)-ngram:
