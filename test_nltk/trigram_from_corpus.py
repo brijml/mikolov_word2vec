@@ -3,7 +3,7 @@ from nltk.util import ngrams
 from nltk.corpus import brown #Load the brown corpus
 
 #Run download for the first time to download the nltk stuff
-#nltk.download()
+nltk.download()
 
 ngram = 3 #A trigram model for trigram training data
 #sentences = brown.sents(categories = 'adventure')

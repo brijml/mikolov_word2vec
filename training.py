@@ -1,9 +1,13 @@
 from nltk.corpus import brown
 import numpy as np
 
+def intial_C(words):
+	pass
+
 def training(words, learning_rate=0.5, M=30, hidden_units = 100,n = 3,**kwargs):
 	
-	""" This method takes in the words and returns a learned distribution of the feature vectors of the words.
+	""" This method takes in the words and returns a learned distribution of the feature vectors of the words and
+		the probability function over words.
 	
 	Parameters
 	--------
@@ -12,8 +16,8 @@ def training(words, learning_rate=0.5, M=30, hidden_units = 100,n = 3,**kwargs):
 	
 	param2 : float
 
-		Learning rate is defined as the rate at which the model learns, higher the learning rate the model converges faster 
-		or probably overshoots. 
+		Learning rate is defined as the rate at which the model learns, higher the learning rate the model 
+		converges faster or probably overshoots. 
 	
 	param3 : int 
 		
@@ -30,9 +34,19 @@ def training(words, learning_rate=0.5, M=30, hidden_units = 100,n = 3,**kwargs):
 	Returns
 	-------
 
-	C : numpy matrix
+	C : numpy matrix of size V*M where V is the number of words in the training set
 
-		Learned feature vector of words."""
+		Learned feature vector of words.
+
+	theta(weights of the neural network) : numpy matrix
+
+		Parameters of the neural network model to be learned
+	
+	"""
+
+
+	#X = initial_C(words)
+
 
 	pass
 
