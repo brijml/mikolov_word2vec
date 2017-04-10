@@ -5,7 +5,7 @@ A Neural Probabilistic Language Model
 		
 		$conda create -n <env-name> python=2
 
-2. 	Enter the virtual environment
+2. 	Activate the virtual environment
 		
 		$source activate <env-name>
 
@@ -13,7 +13,7 @@ A Neural Probabilistic Language Model
 		
 		$conda install --file requirements.txt
 
-4. 	Install the corpus from using nltk download
+4. 	Install the corpus using nltk download
 		
 		$ipython
 			>>>import nltk
