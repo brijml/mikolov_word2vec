@@ -16,7 +16,7 @@ def correct(word):
 	probability = np.zeros(len(vocabulary))
 	index = vocabulary.index(word)
 	probability[index] = 1
-	return np.matrix(probability)
+	return np.matrix(probability).T
 
 def softmax(incoming_vector):
 	exponent = np.exp(incoming_vector)
@@ -43,14 +43,22 @@ def sigmoid(z,func = "logistic"):
 def error_derivative_linear(delta,activation):
 	return delta-activation
 
-def previous_delta_term(delta,weight_vector,activation):
-	return (np.matrix(weight_vector).T * delta) * (activation * (1-activation))
+def previous_delta_term(delta,weights,activation):
+	# print 'weights',weights.shape
+	# print delta.shape,activation.shape
+	activation = np.array(activation)
+	a = activation * (1-activation)
+	b = weights.T*delta
+	# print a.shape,b.shape
+	c = a*np.array(b)
+	# print c.shape		
+	return np.matrix(c)
 
 def do_forward_propogation(x,weights1,weights2):
 	
 	#This is for the hidden layer
 	
-	output_hidden = sigmoid(weights1 * x.T,func = "tanh")
+	output_hidden = sigmoid(weights1 * x,func = "tanh")
 
 	# print weights2.shape,output_hidden.shape
 	#This is for the softmax layer
@@ -66,13 +74,16 @@ def do_backpropogation(seq,weights1,weights2,output_hidden,output_softmax,target
 	The output is a layer of softmax units and the number of units is the size of the vocabulary"""
 	
 	delta_output = target - output_softmax  #gradient of cost function with respect to the input of the softmax
+	# print delta_output.shape,target.shape
 	delta_hidden = previous_delta_term(delta_output,weights2,output_hidden)
 	delta_C = previous_delta_term(delta_hidden,weights1,seq)
 
-	gradient_hidden_to_softmax = output_hidden * delta_output
-	gradient_input_to_hidden = seq * delta_hidden
-	gradient_C = seq * delta_C
-
+	gradient_hidden_to_softmax =  delta_output * output_hidden.T 
+	# print gradient_hidden_to_softmax.shape,weights2.shape
+	gradient_input_to_hidden = delta_hidden * seq.T 
+	# print gradient_input_to_hidden.shape,weights1.shape  
+	gradient_C = np.array(delta_C) * np.array(seq)
+	# print gradient_C.shape,seq.shape
 	return gradient_hidden_to_softmax,gradient_input_to_hidden,gradient_C
 
 
@@ -118,7 +129,7 @@ def training(words, learning_rate=0.01, M=30, hidden_units = 40,n = 3,**kwargs):
 	#global n,M,hidden_units,H
 
 	H = 1 #nuber of hidden layers
-	regualarise = 0.5 #regularisation
+	regularise = 0.5 #regularisation
 	weights_input_to_hidden = initialise_weights(hidden_units,(n-1)*M)
 	weights_hidden_to_softmax = initialise_weights(len(vocabulary),hidden_units)
 	# capital_delta = np.zeros((n,H),dtype = np.float32)
@@ -126,19 +137,20 @@ def training(words, learning_rate=0.01, M=30, hidden_units = 40,n = 3,**kwargs):
 	C = initial_C(vocabulary,M)
 	number_of_training_samples = len(words)
 
-	cdelta_hidden_to_softmax = np.zeros((hidden_units,len(vocabulary)))
-	cdelta_input_to_hidden = np.zeros((n,hidden_units))
-	cdelta_C = np.zeros(n)
-	for i in range(number_of_training_samples):
+	cdelta_hidden_to_softmax = np.zeros((len(vocabulary),hidden_units))
+	cdelta_input_to_hidden = np.zeros((hidden_units,(n-1)*M))
+	cdelta_C = np.matrix(np.zeros((n-1)*M)).T
+	for i in range(number_of_training_samples-n-1):
 	#generate a sequence of words
 		
 		input_sequence = np.zeros(((n-1)*M))
-
+		train_words = []
 		for j in range(1,n):
-	
-			input_sequence[(j-1)*M:(j*M)] = C[words[i+n-j]]
+			seq_value = words[i+n-j]
+			train_words.append(seq_value)
+			input_sequence[(j-1)*M:(j*M)] = C[seq_value]
 		
-		input_sequence = np.matrix(input_sequence)
+		input_sequence = np.matrix(input_sequence).T
 		# print input_sequence.shape
 		target = correct(words[i+n])
 		# capital_delta = backpropogation(x,target,weights,capital_delta)
@@ -154,15 +166,21 @@ def training(words, learning_rate=0.01, M=30, hidden_units = 40,n = 3,**kwargs):
 
 		cdelta_hidden_to_softmax += gradient_hidden_to_softmax
 		cdelta_input_to_hidden += gradient_input_to_hidden
+		# print gradient_C.shape,cdelta_C.shape
 		cdelta_C += gradient_C 
-
+		# print weights_input_to_hidden,cdelta_hidden_to_softmax
 
 	weights_hidden_to_softmax = (weights_hidden_to_softmax - learning_rate * cdelta_hidden_to_softmax) + \
 									(regularise * weights_hidden_to_softmax)
 	weights_input_to_hidden = (weights_input_to_hidden - learning_rate * cdelta_input_to_hidden) + \
-								(regularise * weights_hidden_to_softmax)
-	C = C - learning_rate * cdelta_C
+								(regularise * weights_input_to_hidden)
+	input_sequence = input_sequence - learning_rate * cdelta_C
 
+
+	for t,word_value in enumerate(train_words):
+		C[word_value] = input_sequence[(t-1)*M:(t*M)]
+
+	print 'done on one full batch'
 
 
 if __name__ == '__main__':
