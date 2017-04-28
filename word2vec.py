@@ -1,29 +1,34 @@
 from nltk.corpus import brown
 import numpy as np
 import re
+from collections import Counter
+import matplotlib.pyplot as plt
+from sklearn.externals import joblib
 
 def init_vectors(dim):
 	
-	C = 0.01 * np.random.randn(V*dim)/np.sqrt(V*dim)
+	#Initialising the matrices using a random samples of a normal distribution
+	C = 0.01 * np.random.randn(len_vocab,dim)/np.sqrt(len_vocab*dim)
 	return np.matrix(C)
 
 def one_hot(word):
 
-	ret = np.zeros(V,dtype = np.uint8)
+	#One hot representation of the word where the index for the word is a one and other indices are zeros
+	ret = np.zeros(len_vocab,dtype = np.uint8)
 	index = vocabulary.index(word)
 	ret[index] = 1
 	return ret,index
 
-def negative_distribution(n):
+def negative_distribution():
 	#Sample negative words from the vocabulary
-	#Probability is defined by count(word)/|Vocabulary|
-	distribution = np.power(np.array(freq),3.0/4)
-	sample = np.random.choice(distribution)
-	index = np.where(distribution == sample)[0]
-	return index
+	#Probability is a function of count(word)/|Vocabulary| to power of 3/4
+	index = np.random.randint(low=0, high=table_size, size=1)
+
+	return table[index][0]
 
 def sigmoid(z,func = "logistic"):
 	
+	#Standard sigmoid functions
 	if func == "logistic":
 		return 1/(1+np.exp(-z))
 	elif func == "tanh":
@@ -31,26 +36,35 @@ def sigmoid(z,func = "logistic"):
 		
 def one_training_example(x1,x2,U,V):
 
+	#Gradient Descent on both the matrices for the input word and the outside words for a single training example
 	k = 20
+	learning_rate = 0.01
 	vc,vw = x1[0]*U,x2[0]*V
-	first_term = sigmoid(vc*vw)
+
+	first_term = sigmoid(np.multiply(vc,vw))
 	derivatives = []
 	for i in range(k):
 		index_of_negative_sample = negative_distribution()
-		vn = V[index_of_negative_sample]
-		value_neg = sigmoid(vc*vn)
-		derivatives.append(value_neg*vc)
-		V[index_of_negative_sample] = V[index_of_negative_sample] - leaning_rate * (value_neg * vc)
 
-	derivatives.append((first_term - 1)*vc)
+		if re.search(REGEX,vocabulary[index_of_negative_sample]):
+			continue
+		else:
+			vn = V[index_of_negative_sample]
+			value_neg = sigmoid(np.multiply(vc,vn))
+			temp = np.multiply(value_neg,vc)
+			derivatives.append(temp)
+			V[index_of_negative_sample] = V[index_of_negative_sample] - learning_rate * temp
+
+	derivatives.append(np.multiply((first_term - 1),vc))
+
 	#This the objective function that needs to be minimised
 	# E = -log(first_term) - log(second_term)
 	
-	error_derivatives_positive = (first_term - 1)*vc
+	error_derivatives_positive = np.multiply((first_term - 1),vc)
 	error_derivatives_negative = sum(derivatives)
 
-	V[x2[0]] = V[x2[0]] - leaning_rate * ((first_term - 1) * vc)
-	U[x1[0]] = U[x1[0]] - leaning_rate * error_derivatives_negative
+	V[x2[0]] = V[x2[0]] - learning_rate * error_derivatives_positive
+	U[x1[0]] = U[x1[0]] - learning_rate * error_derivatives_negative
 
 	return U,V
 
@@ -80,50 +94,78 @@ def training(words,window = 2,hidden_units = 300,epoch = 1):
 			It denotes the number of iterations through the training data
 
 	Returns : Numpy Matrix
-				Learned vector representation of the words in the corpus
+			Learned vector representation of the words in the corpus
 	
 	The objective function is to maximise the probabitlity of the words in the co-occuring the window
 	"""
 
 	U = init_vectors(hidden_units)
 	V = init_vectors(hidden_units)
-	V = V.T
-
-	#Regular expression for all the Punctuations
-	REGEX = "[a-zA-Z0-9]"
 
 	iters = 0
 	while iters < epoch:
 		for i,word in enumerate(words):
-			for j in range(-window,window+1):
-				centre_word = words[i]
-				try:
-					outside_word = words[i+j]
-				except IndexError:
-					continue
+			# print word
+			#if the centre word is a punctuation go to the next word
+			if re.search(REGEX,word):
+				print 'Match!',word
+				break
+			
+			else:
+				for j in range(-window,window+1):
+					centre_word = word
+					try:
+						outside_word = words[i+j]
 
-				#if the outside_word or the centre_word is a punctuation break the loop and go to next centre_word
-				# if there is a punctuation:
-				# 	break
+					except IndexError:
+						continue
 
-				#Maximise the probability for the centre_word and outside_word
-				x1,x2 = one_hot(centre_word),one_hot(outside_word)
-				U,V = one_training_example(x1,x2,U,V)
+					#if the outside_word or the centre_word is a punctuation break the loop and go to next outside word
+					if re.search(REGEX,outside_word):
+						print 'MATCH!',outside_word
+						break
+
+					#Maximise the probability for the centre_word and outside_word
+					x1,x2 = one_hot(centre_word),one_hot(outside_word)
+					U,V = one_training_example(x1,x2,U,V)
+		
 		iters+=1
 
-
+	return U
 
 
 if __name__ == '__main__':
+	#Regular expression for all the Punctuations
+	REGEX = "[^a-zA-Z0-9]"
+	
 	categories = brown.categories() #List of all the catgories in the brown corpus
-	words = brown.words(categories = 'adventure') #words take from a particular category of the brown corpus
-	vocabulary = list(set(words))
-	V = len(vocabulary)						#unique words in the corpus
-	freq = []
-	for word in vocabulary:
-		freq.append(words.count(word)/len(vocabulary))
-	# train_length,validation_length = int(0.6 * len(words)),int(0.2 * len(words)) 
-	# training_words = words[0:train_length] #60% of the corpus 
-	# validation_words = words[train_length : train_length + validation_length] #futher 20% of the corpus
-	# test_words = words[train_length + validation_length : len(words)] #remaining corpus
-	training(words)
+	words = []
+	for category in categories:
+		words_temp = brown.words(categories = 'adventure') #words taken from a particular category of the brown corpus
+		words.extend(words_temp)
+
+	count = Counter(words)
+	vocabulary = count.keys()
+	len_vocab = len(vocabulary)
+	
+	freq = np.float32(np.array(count.values()))
+	numerator_distribution = np.power(freq,0.75)
+	norm_term = sum(numerator_distribution)
+	distribution = numerator_distribution/norm_term
+	table_size = int(1e8)
+	table = np.zeros(table_size,dtype = np.int16)
+	previous_j = 0
+	for i,value in enumerate(distribution):
+		j = int(table_size*value)
+		table[previous_j:previous_j+j] = i
+		previous_j = previous_j+j
+
+	word_representations = training(words)
+
+	word_dict = {}
+
+	for i,word in enumerate(vocabulary):
+		word_dict[word] = word_representations[i]
+
+	#Save the dictionary as a pickle file
+	joblib.dump(word_dict,'word.pkl',compress = 3)
