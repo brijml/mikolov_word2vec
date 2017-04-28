@@ -19,3 +19,9 @@ This project is besed on the paper "Distributed Representations of Words and Phr
 			>>>import nltk
 			>>>nltk.download()
 
+5.	Run the scipt word2vec.py to find the word representations
+	
+		$python word2vec.py
+
+6.	The word representations are stored as dictionary where each key-value pair is a word(string) and its vector representation
+	(numpy arrray) which is stored as a pickle file. 	
